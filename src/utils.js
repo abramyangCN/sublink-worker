@@ -168,6 +168,7 @@ export function groupProxiesByCountry(proxies, { getName } = {}) {
 			}
 			return undefined;
 		};
+	const seenByCountry = new Map();
 
 	const normalizeName = (value) => {
 		if (typeof value !== 'string') {
@@ -205,7 +206,13 @@ export function groupProxiesByCountry(proxies, { getName } = {}) {
 		const { name } = countryInfo;
 		if (!grouped[name]) {
 			grouped[name] = { ...countryInfo, proxies: [] };
+			seenByCountry.set(name, new Set());
 		}
+		const seenNames = seenByCountry.get(name);
+		if (seenNames.has(proxyName)) {
+			return;
+		}
+		seenNames.add(proxyName);
 		grouped[name].proxies.push(proxyName);
 	});
 

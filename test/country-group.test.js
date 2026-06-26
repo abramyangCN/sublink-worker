@@ -74,6 +74,7 @@ vmess://ewogICJ2IjogIjIiLAogICJwcyI6ICJ0dzEubm9kZS5jb20iLAogICJhZGQiOiAidHcxLm5v
         const sample = [
             { name: 'HK-Node-1' },
             { tag: '香港节点2' },
+            { name: 'HK-Node-1' },
             'US-Node-1 = ss, example.com, 443',
             '台湾节点 = trojan, example.com, 443'
         ];

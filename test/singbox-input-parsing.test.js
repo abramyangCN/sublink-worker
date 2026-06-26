@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SingboxConfigBuilder } from '../src/builders/SingboxConfigBuilder.js';
 import { ClashConfigBuilder } from '../src/builders/ClashConfigBuilder.js';
+import { ProxyParser } from '../src/parsers/ProxyParser.js';
 
 describe('Sing-Box JSON input parsing', () => {
     const sampleSingboxConfig = JSON.stringify({
@@ -227,5 +228,27 @@ describe('Sing-Box JSON input parsing', () => {
 
         const tuicProxy = proxies.find(p => p.tag === 'TUIC-Test');
         expect(tuicProxy.congestion_control).toBe('bbr');
+    });
+
+    it('should parse anytls URIs into sing-box outbounds', async () => {
+        const result = await ProxyParser.parse('anytls://any-pass@example.com:443?sni=example.com&alpn=h2,http/1.1&client-fingerprint=chrome&skip-cert-verify=true#AnyTLS-Test');
+
+        expect(result).toMatchObject({
+            type: 'anytls',
+            tag: 'AnyTLS-Test',
+            server: 'example.com',
+            server_port: 443,
+            password: 'any-pass'
+        });
+        expect(result.tls).toMatchObject({
+            enabled: true,
+            server_name: 'example.com',
+            insecure: true
+        });
+        expect(result.tls.utls).toMatchObject({
+            enabled: true,
+            fingerprint: 'chrome'
+        });
+        expect(result.tls.alpn).toEqual(['h2', 'http/1.1']);
     });
 });
