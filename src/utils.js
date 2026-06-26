@@ -399,7 +399,8 @@ export function parseCountryFromNodeName(nodeName) {
 
 	const patterns = allEntries.map(({ alias, escaped }) => {
 		if (alias.length <= 3 && /^[A-Za-z]+$/.test(alias)) {
-			return `\\b${escaped}\\b`;
+			// Allow short codes next to digits or separators, but not inside words like "plus".
+			return `(?<![A-Za-z])${escaped}(?![A-Za-z])`;
 		}
 		return escaped;
 	});

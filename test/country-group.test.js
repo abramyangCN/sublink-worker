@@ -85,6 +85,18 @@ vmess://ewogICJ2IjogIjIiLAogICJwcyI6ICJ0dzEubm9kZS5jb20iLAogICJhZGQiOiAidHcxLm5v
         expect(grouped['Taiwan'].proxies).toHaveLength(1);
     });
 
+    it('should group short country codes even when followed by digits', () => {
+        const grouped = groupProxiesByCountry([
+            { name: 'HK1' },
+            { name: 'US01' },
+            { name: 'JP-02' }
+        ]);
+
+        expect(grouped['Hong Kong'].proxies).toContain('HK1');
+        expect(grouped['United States'].proxies).toContain('US01');
+        expect(grouped['Japan'].proxies).toContain('JP-02');
+    });
+
     describe('parseCountryFromNodeName word boundary handling', () => {
         it('should NOT match "US" inside "plus"', () => {
             expect(parseCountryFromNodeName('plus-node-1')).toBeNull();
