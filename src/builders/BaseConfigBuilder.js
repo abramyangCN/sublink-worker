@@ -99,8 +99,9 @@ export class BaseConfigBuilder {
                                 this.subscriptionUserinfo = subscriptionUserinfo;
                             }
 
-                            // If format is compatible with target client, use as provider
-                            if (this.isCompatibleProviderFormat(format)) {
+                            // Country grouping needs concrete proxy names, so we must parse the
+                            // payload instead of short-circuiting to a provider when grouping is enabled.
+                            if (this.isCompatibleProviderFormat(format) && !this.groupByCountry) {
                                 this.providerUrls.push(originalUrl);
                                 continue;  // Skip parsing, will be used as provider
                             }

@@ -80,6 +80,38 @@ describe('Auto Proxy Providers Detection', () => {
             expect(nodeSelect.use).toContain(providerName);
         });
 
+        it('should parse Clash URL instead of using proxy-provider when groupByCountry is enabled', async () => {
+            fetchSubscriptionWithFormat.mockResolvedValue({
+                content: mockClashYaml,
+                format: 'clash',
+                url: 'https://example.com/clash-sub?token=xxx'
+            });
+
+            const builder = new ClashConfigBuilder(
+                'https://example.com/clash-sub?token=xxx',
+                [],
+                [],
+                null,
+                'zh-CN',
+                'test-agent',
+                true
+            );
+
+            const yamlText = await builder.build();
+            const config = yaml.load(yamlText);
+
+            expect(config['proxy-providers']).toBeUndefined();
+
+            const nodeSelect = config['proxy-groups'].find(g => g.name === '🚀 节点选择');
+            expect(nodeSelect.proxies).toEqual(expect.arrayContaining([
+                '⚡ 自动选择',
+                '🖐️ 手动切换',
+                '🇭🇰 Hong Kong',
+                '🇯🇵 Japan'
+            ]));
+            expect(nodeSelect.use).toBeUndefined();
+        });
+
         it('should parse and convert Sing-Box URL (incompatible format)', async () => {
             // Mock fetchSubscriptionWithFormat to return Sing-Box format
             fetchSubscriptionWithFormat.mockResolvedValue({
