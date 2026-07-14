@@ -254,6 +254,38 @@ proxy-groups:
             expect(customGroup.proxies).toContain('HK-Node');
         });
 
+        it('ClashConfigBuilder should preserve explicit base config rules and rule-providers', async () => {
+            const baseConfig = {
+                port: 17890,
+                proxies: [],
+                'proxy-groups': [],
+                'rule-providers': {
+                    'private-provider': {
+                        type: 'http',
+                        behavior: 'classical',
+                        url: 'https://example.com/private.yaml',
+                        path: './ruleset/private.yaml',
+                        interval: 86400
+                    }
+                },
+                rules: [
+                    'DOMAIN-SUFFIX,internal.example,DIRECT',
+                    'RULE-SET,private-provider,DIRECT'
+                ]
+            };
+
+            const builder = new ClashConfigBuilder(clashInput, 'minimal', [], baseConfig, 'zh-CN', 'test-agent');
+            const yamlText = await builder.build();
+            const built = yaml.load(yamlText);
+
+            expect(built['rule-providers']?.['private-provider']).toBeDefined();
+            expect(built.rules.slice(0, 2)).toEqual([
+                'DOMAIN-SUFFIX,internal.example,DIRECT',
+                'RULE-SET,private-provider,DIRECT'
+            ]);
+            expect(built.rules[built.rules.length - 1]).toBe('MATCH,🐟 漏网之鱼');
+        });
+
         it('ClashConfigBuilder should preserve custom proxy-group from Sing-Box input', async () => {
             const builder = new ClashConfigBuilder(singboxInput, 'minimal', [], null, 'zh-CN', 'test-agent');
             const yamlText = await builder.build();

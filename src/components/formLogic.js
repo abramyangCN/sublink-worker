@@ -285,6 +285,7 @@ export const formLogicFn = (t) => {
                     }
                     this.currentConfigId = configId;
                     this.updateConfigIdInUrl(configId);
+                    this.refreshGeneratedLinks();
 
                     const successMessage = window.APP_TRANSLATIONS.saveConfigSuccess || 'Configuration saved successfully!';
                     alert(`${successMessage}\nID: ${configId}`);
@@ -338,6 +339,7 @@ export const formLogicFn = (t) => {
                     localStorage.removeItem('configEditor');
                     this.currentConfigId = '';
                     this.updateConfigIdInUrl(null);
+                    this.refreshGeneratedLinks();
                 }
             },
 
@@ -362,6 +364,57 @@ export const formLogicFn = (t) => {
                 window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
             },
 
+            buildGeneratedLinks(customRules = []) {
+                const input = (this.input || '').trim();
+                if (!input) {
+                    return null;
+                }
+
+                const origin = window.location.origin;
+                const params = new URLSearchParams();
+                params.append('config', this.input);
+                params.append('ua', this.customUA);
+                params.append('selectedRules', JSON.stringify(this.selectedRules));
+                params.append('customRules', JSON.stringify(customRules));
+
+                if (this.groupByCountry) params.append('group_by_country', 'true');
+                if (!this.includeAutoSelect) params.append('include_auto_select', 'false');
+                if (this.enableClashUI) params.append('enable_clash_ui', 'true');
+                if (this.externalController) params.append('external_controller', this.externalController);
+                if (this.externalUiDownloadUrl) params.append('external_ui_download_url', this.externalUiDownloadUrl);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const configId = this.currentConfigId || urlParams.get('configId');
+                if (configId) {
+                    params.append('configId', configId);
+                }
+
+                const queryString = params.toString();
+                return {
+                    xray: origin + '/xray?' + queryString,
+                    singbox: origin + '/singbox?' + queryString,
+                    clash: origin + '/clash?' + queryString,
+                    surge: origin + '/surge?' + queryString
+                };
+            },
+
+            refreshGeneratedLinks() {
+                if (!this.generatedLinks) {
+                    return;
+                }
+
+                let customRules = [];
+                try {
+                    const customRulesInput = document.querySelector('input[name="customRules"]');
+                    customRules = customRulesInput && customRulesInput.value ? JSON.parse(customRulesInput.value) : [];
+                } catch {
+                    customRules = [];
+                }
+
+                this.generatedLinks = this.buildGeneratedLinks(customRules);
+                this.shortenedLinks = null;
+            },
+
             async submitForm() {
                 this.loading = true;
                 this.shortenedLinks = null; // Reset shortened links when generating new links
@@ -369,36 +422,7 @@ export const formLogicFn = (t) => {
                     // Get custom rules from the child component via the hidden input
                     const customRulesInput = document.querySelector('input[name="customRules"]');
                     const customRules = customRulesInput && customRulesInput.value ? JSON.parse(customRulesInput.value) : [];
-
-                    // Construct URLs
-                    const origin = window.location.origin;
-                    const params = new URLSearchParams();
-                    params.append('config', this.input);
-                    params.append('ua', this.customUA);
-                    params.append('selectedRules', JSON.stringify(this.selectedRules));
-                    params.append('customRules', JSON.stringify(customRules));
-
-                    if (this.groupByCountry) params.append('group_by_country', 'true');
-                    if (!this.includeAutoSelect) params.append('include_auto_select', 'false');
-                    if (this.enableClashUI) params.append('enable_clash_ui', 'true');
-                    if (this.externalController) params.append('external_controller', this.externalController);
-                    if (this.externalUiDownloadUrl) params.append('external_ui_download_url', this.externalUiDownloadUrl);
-
-                    // Add configId if present in URL
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const configId = this.currentConfigId || urlParams.get('configId');
-                    if (configId) {
-                        params.append('configId', configId);
-                    }
-
-                    const queryString = params.toString();
-
-                    this.generatedLinks = {
-                        xray: origin + '/xray?' + queryString,
-                        singbox: origin + '/singbox?' + queryString,
-                        clash: origin + '/clash?' + queryString,
-                        surge: origin + '/surge?' + queryString
-                    };
+                    this.generatedLinks = this.buildGeneratedLinks(customRules);
 
                     // Scroll to results
                     setTimeout(() => {

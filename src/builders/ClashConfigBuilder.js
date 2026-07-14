@@ -47,6 +47,20 @@ function getClashUdpValue(proxy, defaultEnabled = true) {
     return defaultEnabled;
 }
 
+function stripTerminalMatchRules(rules = []) {
+    if (!Array.isArray(rules)) {
+        return [];
+    }
+
+    return rules.filter(rule => {
+        if (typeof rule !== 'string') {
+            return true;
+        }
+
+        return !rule.trim().toUpperCase().startsWith('MATCH,');
+    });
+}
+
 export class ClashConfigBuilder extends BaseConfigBuilder {
     constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false, enableClashUI = false, externalController, externalUiDownloadUrl, includeAutoSelect = true) {
         const hasExplicitBaseConfig = baseConfig != null;
@@ -650,10 +664,16 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
     }
 
     formatConfig() {
+        const existingRules = stripTerminalMatchRules(this.config.rules);
+        const existingRuleProviders =
+            this.config['rule-providers'] && typeof this.config['rule-providers'] === 'object'
+                ? deepCopy(this.config['rule-providers'])
+                : {};
         const rules = this.generateRules();
         const useMrs = supportsMrsFormat(this.userAgent);
         const { site_rule_providers, ip_rule_providers } = generateClashRuleSets(this.selectedRules, this.customRules, useMrs);
         this.config['rule-providers'] = {
+            ...existingRuleProviders,
             ...site_rule_providers,
             ...ip_rule_providers
         };
@@ -671,6 +691,7 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         this.validateProxyGroups();
 
         this.config.rules = [
+            ...existingRules,
             ...ruleResults,
             `MATCH,${this.t('outboundNames.Fall Back')}`
         ];
