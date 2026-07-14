@@ -100,8 +100,15 @@ export class BaseConfigBuilder {
                     const { fetchSubscriptionWithFormat } = await import('../parsers/subscription/httpSubscriptionFetcher.js');
 
                     try {
-                        const fetchResult = await fetchSubscriptionWithFormat(trimmedUrl, this.userAgent);
-                        if (fetchResult) {
+                        const userAgentsToTry = this.userAgent ? [this.userAgent, undefined] : [undefined];
+                        let handled = false;
+
+                        for (const fetchUserAgent of userAgentsToTry) {
+                            const fetchResult = await fetchSubscriptionWithFormat(trimmedUrl, fetchUserAgent);
+                            if (!fetchResult) {
+                                continue;
+                            }
+
                             const { content, format, url: originalUrl, subscriptionUserinfo } = fetchResult;
 
                             if (subscriptionUserinfo && !this.subscriptionUserinfo) {
@@ -112,10 +119,11 @@ export class BaseConfigBuilder {
                             // payload instead of short-circuiting to a provider when grouping is enabled.
                             if (this.isCompatibleProviderFormat(format) && !this.groupByCountry) {
                                 this.providerUrls.push(originalUrl);
-                                continue;  // Skip parsing, will be used as provider
+                                handled = true;
+                                break;
                             }
 
-                            // Otherwise parse the content as usual
+                            const parsedBefore = parsedItems.length;
                             const result = parseSubscriptionContent(content);
                             if (result && typeof result === 'object' && (result.type === 'yamlConfig' || result.type === 'singboxConfig' || result.type === 'surgeConfig')) {
                                 this.applyParsedConfigResult(result);
@@ -126,10 +134,7 @@ export class BaseConfigBuilder {
                                         }
                                     });
                                 }
-                                continue;
-                            }
-                            // Handle array of URIs or other formats
-                            if (Array.isArray(result)) {
+                            } else if (Array.isArray(result)) {
                                 for (const item of result) {
                                     if (item && typeof item === 'object' && item.tag) {
                                         parsedItems.push(item);
@@ -141,6 +146,15 @@ export class BaseConfigBuilder {
                                     }
                                 }
                             }
+
+                            if (parsedItems.length > parsedBefore) {
+                                handled = true;
+                                break;
+                            }
+                        }
+
+                        if (handled) {
+                            continue;
                         }
                     } catch (error) {
                         console.error('Error processing HTTP subscription:', error);
