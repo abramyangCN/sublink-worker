@@ -2,6 +2,7 @@ import { ProxyParser } from '../parsers/index.js';
 import { createStableProviderName, deepCopy, tryDecodeSubscriptionLines, decodeBase64 } from '../utils.js';
 import { createTranslator } from '../i18n/index.js';
 import { generateRules, getOutbounds, PREDEFINED_RULE_SETS } from '../config/index.js';
+import { ServiceError } from '../services/errors.js';
 
 export class BaseConfigBuilder {
     constructor(inputString, baseConfig, lang, userAgent, groupByCountry = false, includeAutoSelect = true) {
@@ -17,6 +18,8 @@ export class BaseConfigBuilder {
         this.providerUrls = [];  // URLs to use as providers (auto-sync)
         this.autoProviderDescriptors = undefined;
         this.subscriptionUserinfo = undefined;
+        this.remoteFetchAttemptCount = 0;
+        this.remoteFetchFailureReasons = [];
     }
 
     applyParsedConfigResult(result) {
@@ -98,6 +101,7 @@ export class BaseConfigBuilder {
                 // Check if it's an HTTP(S) URL - may use as provider if format matches
                 if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
                     const { fetchSubscriptionWithFormat } = await import('../parsers/subscription/httpSubscriptionFetcher.js');
+                    this.remoteFetchAttemptCount += 1;
 
                     try {
                         const userAgentsToTry = this.userAgent ? [this.userAgent, undefined] : [undefined];
@@ -156,7 +160,10 @@ export class BaseConfigBuilder {
                         if (handled) {
                             continue;
                         }
+
+                        this.remoteFetchFailureReasons.push(`Remote subscription returned no supported proxies: ${trimmedUrl}`);
                     } catch (error) {
+                        this.remoteFetchFailureReasons.push(`Failed to fetch remote subscription: ${trimmedUrl} (${error?.message || error})`);
                         console.error('Error processing HTTP subscription:', error);
                     }
                     continue;
@@ -191,6 +198,11 @@ export class BaseConfigBuilder {
                     parsedItems.push(result);
                 }
             }
+        }
+
+        if (parsedItems.length === 0 && this.providerUrls.length === 0 && this.remoteFetchAttemptCount > 0) {
+            const reason = this.remoteFetchFailureReasons[0] || 'Remote subscription returned no supported proxies';
+            throw new ServiceError(reason, 502);
         }
 
         return parsedItems;

@@ -62,4 +62,23 @@ describe('Remote subscription UA fallback', () => {
         expect((built.proxies || []).map(proxy => proxy.name)).toContain('FallbackNode');
         expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2);
     });
+
+    it('returns a 502 instead of an empty Clash config when remote subscription fetch yields no supported proxies', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({
+            ok: true,
+            status: 200,
+            text: async () => 'error code: 1003',
+            headers: {
+                get: () => null
+            }
+        })));
+
+        const app = createTestApp();
+        const res = await app.request(
+            `http://localhost/clash?config=${encodeURIComponent(remoteSubscriptionUrl)}&ua=${encodeURIComponent('FlClash/v0.8.94')}&lang=en-US`
+        );
+
+        expect(res.status).toBe(502);
+        expect(await res.text()).toContain('Remote subscription returned no supported proxies');
+    });
 });
