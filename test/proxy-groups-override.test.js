@@ -197,6 +197,63 @@ FINAL,DIRECT
             expect(customGroup.proxies).toContain('HK-Node');
         });
 
+        it('ClashConfigBuilder should keep explicit base config fields when input is a full Clash subscription', async () => {
+            const baseConfig = {
+                port: 17890,
+                'socks-port': 17891,
+                'allow-lan': true,
+                mode: 'global',
+                'log-level': 'debug',
+                dns: {
+                    enable: true,
+                    nameserver: ['https://dns.example.com/dns-query']
+                },
+                proxies: [],
+                'proxy-groups': []
+            };
+            const clashInputWithGeneralConfig = `
+port: 7890
+allow-lan: false
+mode: rule
+log-level: info
+proxies:
+  - name: HK-Node
+    type: ss
+    server: hk.example.com
+    port: 443
+    cipher: aes-128-gcm
+    password: test
+proxy-groups:
+  - name: 自定义选择
+    type: select
+    proxies:
+      - DIRECT
+      - HK-Node
+`;
+
+            const builder = new ClashConfigBuilder(
+                clashInputWithGeneralConfig,
+                'minimal',
+                [],
+                baseConfig,
+                'zh-CN',
+                'test-agent'
+            );
+            const yamlText = await builder.build();
+            const built = yaml.load(yamlText);
+
+            expect(built.port).toBe(17890);
+            expect(built['socks-port']).toBe(17891);
+            expect(built['allow-lan']).toBe(true);
+            expect(built.mode).toBe('global');
+            expect(built['log-level']).toBe('debug');
+            expect(built.dns?.nameserver).toEqual(['https://dns.example.com/dns-query']);
+
+            const customGroup = (built['proxy-groups'] || []).find(g => g && g.name === '自定义选择');
+            expect(customGroup).toBeDefined();
+            expect(customGroup.proxies).toContain('HK-Node');
+        });
+
         it('ClashConfigBuilder should preserve custom proxy-group from Sing-Box input', async () => {
             const builder = new ClashConfigBuilder(singboxInput, 'minimal', [], null, 'zh-CN', 'test-agent');
             const yamlText = await builder.build();

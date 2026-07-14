@@ -49,10 +49,8 @@ function getClashUdpValue(proxy, defaultEnabled = true) {
 
 export class ClashConfigBuilder extends BaseConfigBuilder {
     constructor(inputString, selectedRules, customRules, baseConfig, lang, userAgent, groupByCountry = false, enableClashUI = false, externalController, externalUiDownloadUrl, includeAutoSelect = true) {
-        if (!baseConfig) {
-            baseConfig = CLASH_CONFIG;
-        }
-        super(inputString, baseConfig, lang, userAgent, groupByCountry, includeAutoSelect);
+        const hasExplicitBaseConfig = baseConfig != null;
+        super(inputString, baseConfig ?? CLASH_CONFIG, lang, userAgent, groupByCountry, includeAutoSelect);
         this.selectedRules = selectedRules;
         this.customRules = customRules;
         this.countryGroupNames = [];
@@ -60,6 +58,15 @@ export class ClashConfigBuilder extends BaseConfigBuilder {
         this.enableClashUI = enableClashUI;
         this.externalController = externalController;
         this.externalUiDownloadUrl = externalUiDownloadUrl;
+        this.hasExplicitBaseConfig = hasExplicitBaseConfig;
+    }
+
+    getParsedConfigOverrideMode(result) {
+        if (this.hasExplicitBaseConfig && result?.type && ['yamlConfig', 'singboxConfig', 'surgeConfig'].includes(result.type)) {
+            return 'groups-only';
+        }
+
+        return 'full';
     }
 
     /**
