@@ -364,7 +364,14 @@ export function createApp(bindings = {}) {
             const { type, content } = await c.req.json();
             const storage = requireConfigStorage(services.configStorage);
             const configId = await storage.saveConfig(type, content);
-            return c.text(configId);
+            const storedConfig = await storage.getConfigById(configId);
+            const headers = {
+                'x-sublink-saved-config-id': configId,
+                'x-sublink-saved-rules': String(Array.isArray(storedConfig?.rules) ? storedConfig.rules.length : 0),
+                'x-sublink-saved-proxy-groups': String(Array.isArray(storedConfig?.['proxy-groups']) ? storedConfig['proxy-groups'].length : 0),
+                'x-sublink-saved-rule-providers': String(storedConfig?.['rule-providers'] && typeof storedConfig['rule-providers'] === 'object' ? Object.keys(storedConfig['rule-providers']).length : 0)
+            };
+            return c.text(configId, 200, headers);
         } catch (error) {
             if (error instanceof SyntaxError) {
                 return c.text(`Invalid format: ${error.message}`, 400);

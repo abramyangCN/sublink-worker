@@ -101,6 +101,10 @@ describe('Base config + remote Clash conversion', () => {
         expect(saveRes.status).toBe(200);
         const configId = (await saveRes.text()).trim();
         expect(configId).toBeTruthy();
+        expect(saveRes.headers.get('x-sublink-saved-config-id')).toBe(configId);
+        expect(saveRes.headers.get('x-sublink-saved-rules')).toBe('5');
+        expect(saveRes.headers.get('x-sublink-saved-proxy-groups')).toBe('3');
+        expect(saveRes.headers.get('x-sublink-saved-rule-providers')).toBe('2');
 
         const res = await app.request(
             `http://localhost/clash?config=${encodeURIComponent(remoteSubscriptionUrl)}&configId=${encodeURIComponent(configId)}&lang=en-US`
