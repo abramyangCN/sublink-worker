@@ -163,7 +163,15 @@ export function createApp(bindings = {}) {
             );
             await builder.build();
             const userinfo = builder.getSubscriptionUserinfo();
-            const headers = { 'Content-Type': 'text/yaml; charset=utf-8' };
+            const headers = {
+                'Content-Type': 'text/yaml; charset=utf-8',
+                'x-sublink-config-id': configId || '',
+                'x-sublink-base-config-loaded': String(!!baseConfig),
+                'x-sublink-base-config-rules': String(Array.isArray(baseConfig?.rules) ? baseConfig.rules.length : 0),
+                'x-sublink-base-config-proxy-groups': String(Array.isArray(baseConfig?.['proxy-groups']) ? baseConfig['proxy-groups'].length : 0),
+                'x-sublink-base-config-rule-providers': String(baseConfig?.['rule-providers'] && typeof baseConfig['rule-providers'] === 'object' ? Object.keys(baseConfig['rule-providers']).length : 0),
+                'x-sublink-output-proxies': String(Array.isArray(builder.config?.proxies) ? builder.config.proxies.length : 0)
+            };
             if (userinfo) {
                 headers['subscription-userinfo'] = userinfo;
             }
